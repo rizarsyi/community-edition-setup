@@ -12,6 +12,7 @@ from bottle import template
 from bottle import TEMPLATE_PATH
 from bottle import request
 from bottle import response
+from bottle import abort
 from distutils.util import strtobool
 from queue import Queue
 from messages import msg
@@ -641,7 +642,9 @@ class GluuSetupApp:
     def add_services_handler(self):
 
         service_to_install = []
-
+        if not request.json.items():
+            return dict({'status': False, "message": "No component's to install"})
+            
         for k, v in request.json.items():
             service_to_install.append(k)
 
@@ -689,4 +692,4 @@ class GluuSetupApp:
         return json.dumps(data)
 
     def shutdown(self):
-        self._app.close()
+        self._app.stop()

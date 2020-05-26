@@ -138,6 +138,10 @@
 
       initialize = function(){
          $.get('/initialize', function(data, status){
+          
+          if(data.installed){
+            window.location.href = '/post-installation'
+          }
 
           $.each(data, function(i, item){
             let $el = $('input[name="'+i+'"]')
