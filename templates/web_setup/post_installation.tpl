@@ -150,7 +150,11 @@
         if(responseData.status){
           actionButton.disabled = true
           myTimer = setInterval(getData, 1000);
+          return
         }
+        
+        alert(responseData.message)
+
       })
       .catch(err => {
         console.log(err);
