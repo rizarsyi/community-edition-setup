@@ -5638,6 +5638,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=parser_description)
     parser.add_argument('-c', help="Use command line instead of tui", action='store_true')
     parser.add_argument('-d', help="Installation directory")
+    parser.add_argument('-g', help="GUI installation") 
     parser.add_argument('-r', '--install-oxauth-rp', help="Install oxAuth RP", action='store_true')
     parser.add_argument('-p', '--install-passport', help="Install Passport", action='store_true')
     parser.add_argument('-s', '--install-shib', help="Install the Shibboleth IDP", action='store_true')
@@ -5683,7 +5684,17 @@ if __name__ == '__main__':
 
     argsp = parser.parse_args()
 
-    if (not argsp.c) and istty and (int(tty_rows) > 24) and (int(tty_columns) > 79):
+    if (argsp.g):
+        try:
+            import bottle
+        except:
+            print("Can't Start GUI installation, continuing with commandline")
+        else:
+            from pylib import gui
+            from pylib.gui import *
+            INSTALL_METHOD = 'gui'
+
+    if (not argsp.c and not argsp.g) and istty and (int(tty_rows) > 24) and (int(tty_columns) > 79):
         try:
             import npyscreen
         except:
@@ -5692,6 +5703,7 @@ if __name__ == '__main__':
             from pylib import tui
             thread_queue = tui.queue
             from pylib.tui import *
+            INSTALL_METHOD = 'tui'
 
     if not argsp.n and not thread_queue:
         resource_checkings()
@@ -5850,6 +5862,28 @@ if __name__ == '__main__':
     if setupOptions['loadTestDataExit']:
         installObject.initialize()
         installObject.load_test_data_exit()
+    
+    # if gui method, start the web service here
+    if INSTALL_METHOD == 'gui':
+
+        installObject.logIt("Installing Gluu Server", True)
+        installObject.initialize()
+
+        msg = gui.msg
+        msg.storages = list(installObject.couchbaseBucketDict.keys())
+        msg.installation_step_number = 33
+        msg.os_type = installObject.os_type
+        msg.os_initdaemon = installObject.os_initdaemon
+        msg.apache_version = installObject.apache_version
+        msg.current_mem_size = current_mem_size
+        msg.current_number_of_cpu = current_number_of_cpu
+        msg.current_free_disk_space = available_disk_space
+        msg.current_file_max = file_max
+
+        app_setup = gui.GluuSetupApp()
+        app_setup.install_object = installObject
+        app_setup.start()
+        sys.exit(2)
 
     if installObject.check_installed():
         print("\nThis instance already configured. If you need to install new one you should reinstall package first.")
