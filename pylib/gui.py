@@ -5,6 +5,7 @@ import os
 import threading
 import time
 import textwrap
+import subprocess
 
 from bottle import Bottle
 from bottle import redirect
@@ -12,7 +13,6 @@ from bottle import template
 from bottle import TEMPLATE_PATH
 from bottle import request
 from bottle import response
-from bottle import abort
 from distutils.util import strtobool
 from queue import Queue
 from messages import msg
@@ -141,6 +141,10 @@ class GluuSetupApp:
                           'installCasa', 'oxd_url', 'wrends_install',
                           'wrends_password', 'wrends_hosts', 'cb_install',
                           'cb_admin', 'cb_password', 'cb_hosts')
+        self.process = None
+        self.status = None
+        self.output = ''
+        self.error = ''
 
     def start(self):
         self._app.run(host=self.host, port=self.port, debug=True)
@@ -665,9 +669,24 @@ class GluuSetupApp:
         }
 
         for service in service_to_install:
-            os.system('cd /install/community-edition-setup; python3 post-setup-add-components.py -' + args_for_installer[service][0])
-            q.put((service, ' Installing {}'.format(service)))
-            time.sleep(20)
+            cmd = ["python3", "post-setup-add-components.py", "-{}".format(args_for_installer[service][0])]
+            try:
+                q.put((service, ' Installing {}'.format(service)))
+                self.process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                while self.process.poll() is None:
+                    output = self.process.stdout.readline()
+                    if output == '' and self.process.poll() is not None:
+                        break
+
+                    if output:
+                        q.put((service, output.strip().decode()))
+                #self.output, self.error = self.process.communicate()
+                #self.status = self.process.returncode
+            except subprocess.CalledProcessError:
+                q.put((ERROR, 'something went wrong'))
+
+            #q.put((service, ' Installing {}'.format(service)))
+            #time.sleep(20)
         q.put((COMPLETED, 'done'))
 
     def get_log(self):

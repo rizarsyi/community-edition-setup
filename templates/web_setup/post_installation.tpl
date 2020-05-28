@@ -9,17 +9,19 @@
         <form id="installServices" action="/add-services" method="POST" novalidate>
           % for component in components:
             % installed = 'checked' if component['installed'] else ''
+            % disabled = 'disabled' if component['installed'] else ''
+
             <div class="form-group row">
               <div class="mr-5">
                 <div class="custom-control custom-switch">
-                  <input id="{{ component['service'] }}" name="{{ component['service'] }}" type="checkbox" class="custom-control-input check-service" {{ installed }} value="{{ component['installed'] }}"> 
+                  <input id="{{ component['service'] }}" name="{{ component['service'] }}" {{disabled}} type="checkbox" class="custom-control-input check-service" {{ installed }} value="{{ component['installed'] }}"> 
                   <label class="custom-control-label" for="{{ component['service'] }}">{{ component['label'] }}</label>
                 </div>
               </div>
 
               <div id="{{component['service']}}-loader" class="align-items-center collapse">
                 <span class="spinner-border spinner-border-sm ml-auto text-info" role="status" aria-hidden="true"></span>
-                <span class="ml-3 text-info">Loading...</span>
+                <span id="process-message" class="ml-3 text-info"></span>
               </div>
             </div>
 
@@ -116,7 +118,7 @@
 
       sendHttpRequest('GET', '/get-log').then(responseData =>{
 
-
+        console.log(responseData)
         if(responseData.progress_percentage == -99){
           console.log('done')
           var loader = document.getElementById(currentService + '-loader')
@@ -130,15 +132,18 @@
 
           if(currentService.length == 0){
             currentService = responseData.service
-          } 
+          }
+
           if(currentService !== responseData.service){
             var loader = document.getElementById(currentService + '-loader')
             loader.innerHTML = '<span class="badge badge-pill badge-success">Installation complete</span>';
           }
 
           currentService = responseData.service
-          var loader = document.getElementById(currentService + '-loader')
+          var loader = document.getElementById(currentService + '-loader'),
+              message = loader.getElementsByTagName('span');
           loader.classList.add('show')
+          message[1].innerHTML = responseData.message
         }
       });
     };
