@@ -97,6 +97,8 @@ REMOTE = '2'
 COMPLETED = -99
 ERROR = -101
 
+INSTALL_METHOD = None
+
 suggested_mem_size = 3.7 # in GB
 suggested_number_of_cpu = 2
 suggested_free_disk_space = 40 #in GB
