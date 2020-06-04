@@ -199,8 +199,8 @@ class Setup(object):
         self.cmd_mkdir = '/bin/mkdir'
         self.cmd_rpm = '/bin/rpm'
         self.cmd_dpkg = '/usr/bin/dpkg'
-        self.opensslCommand = '/usr/bin/openssl'
-        self.systemctl = os.popen('which systemctl').read().strip()
+        self.opensslCommand = shutil.which('openssl')
+        self.systemctl = shutil.which('systemctl')
 
         self.sysemProfile = "/etc/profile"
 
@@ -385,7 +385,7 @@ class Setup(object):
         self.admin_email = None
         self.encoded_ox_ldap_pw = None
         self.encoded_shib_jks_pw = None
-        self.application_max_ram = 3072    # in MB
+        self.application_max_ram = int(current_mem_size * .83 * 1000) # 83% of physical memory
         self.encode_salt = None
         self.admin_inum = None
 
@@ -891,11 +891,11 @@ class Setup(object):
                 self.run(cmd)
 
         gluu_radius_jks_fn = os.path.join(self.certFolder, 'gluu-radius.jks')
-        if os.path.exists(gluu_radius_jks_fn):
-            self.run([self.cmd_chown, 'radius:gluu', gluu_radius_jks_fn])
-
-        if self.installGluuRadius:
-            self.run([self.cmd_chown, 'radius:gluu', os.path.join(self.certFolder, 'gluu-radius.private-key.pem')])
+        gluu_radius_pem_fn = os.path.join(self.certFolder, 'gluu-radius.private-key.pem')
+        for fn in (gluu_radius_jks_fn, gluu_radius_pem_fn):
+            if os.path.exists(fn):
+                self.run([self.cmd_chown, 'radius:gluu', fn])
+                self.run([self.cmd_chmod, '660', fn])
 
     def set_permissions(self):
         self.logIt("Changing permissions")
@@ -916,16 +916,11 @@ class Setup(object):
         if self.os_type in ['debian', 'ubuntu']:
             self.run(['/bin/chmod', '-f', '644', self.etc_hostname])
 
-
         if self.installSaml:
             realIdp3Folder = os.path.realpath(self.idp3Folder)
             realIdp3BinFolder = "%s/bin" % realIdp3Folder;
             if os.path.exists(realIdp3BinFolder):
                 self.run(['find', realIdp3BinFolder, '-name', '*.sh', '-exec', 'chmod', "755", '{}',  ';'])
-
-        self.run([self.cmd_chmod, '660', os.path.join(self.certFolder, 'gluu-radius.jks')])
-        if self.installGluuRadius:
-            self.run([self.cmd_chmod, '660', os.path.join(self.certFolder, 'gluu-radius.private-key.pem')])
 
     def detect_ip(self):
         detectedIP = None
@@ -1026,7 +1021,7 @@ class Setup(object):
             self.admin_inum = str(uuid.uuid4())
 
         if not self.application_max_ram:
-            self.application_max_ram = 3072
+            self.application_max_ram = int(current_mem_size * .83 * 1000) # 83% of physical memory
 
         if not self.couchbaseShibUserPassword:
             self.couchbaseShibUserPassword = self.getPW()
@@ -3156,7 +3151,7 @@ class Setup(object):
             else:
                 print("Please enter valid email address")
         
-        self.application_max_ram = self.getPrompt("Enter maximum RAM for applications in MB", str(3072))
+        self.application_max_ram = self.getPrompt("Enter maximum RAM for applications in MB", str(self.application_max_ram))
 
         oxtrust_admin_password = self.getPW(special='.*=!%&+/-')
 
@@ -5583,7 +5578,7 @@ current_mem_size = round(current_mem_bytes / (1024.**3), 1) #in GB
 current_number_of_cpu = multiprocessing.cpu_count()
 
 disk_st = os.statvfs('/')
-available_disk_space = disk_st.f_bavail * disk_st.f_frsize / (1024 * 1024 *1024)
+available_disk_space = round(disk_st.f_bavail * disk_st.f_frsize / (1024 * 1024 *1024), 1)
 
 def resource_checkings():
 
@@ -5622,7 +5617,7 @@ def resource_checkings():
 
 
     if available_disk_space < suggested_free_disk_space:
-        print(("{0}Warning: Available free disk space was determined to be {1:0.1f} "
+        print(("{0}Warning: Available free disk space was determined to be {1} "
             "GB. This is less than the required disk space of {2} GB.{3}".format(
                                                         gluu_utils.colors.WARNING,
                                                         available_disk_space,
