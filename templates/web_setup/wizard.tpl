@@ -54,9 +54,56 @@
       line-height: 1.428571429;
       border-radius: 15px;
     }
+
+    #loader {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      z-index: 1;
+      width: 150px;
+      height: 150px;
+      margin: -75px 0 0 -75px;
+      border: 16px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 16px solid #3498db;
+      width: 120px;
+      height: 120px;
+      -webkit-animation: spin 2s linear infinite;
+      animation: spin 2s linear infinite;
+    }
+
+    @-webkit-keyframes spin {
+      0% { -webkit-transform: rotate(0deg); }
+      100% { -webkit-transform: rotate(360deg); }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Add animation to "page content" */
+    .animate-bottom {
+      position: relative;
+      -webkit-animation-name: animatebottom;
+      -webkit-animation-duration: 1s;
+      animation-name: animatebottom;
+      animation-duration: 1s
+    }
+
+    @-webkit-keyframes animatebottom {
+      from { bottom:-100px; opacity:0 }
+      to { bottom:0px; opacity:1 }
+    }
+
+    @keyframes animatebottom {
+      from{ bottom:-100px; opacity:0 }
+      to{ bottom:0; opacity:1 }
+    }
   </style>
 </head>
-<body>
+<body onload="initialize()">
+  <div id="loader"></div>
   <nav class="navbar navbar-dark bg-dark mb-3">
     <a href="#" title="Gluu Server 4.1 Docs" class="navbar-brand">
       <img src="https://gluu.org/docs/gluu-server/gluu.jpg" width="30" height="30" class="d-inline-block align-top">
@@ -64,7 +111,7 @@
    </a>
   </nav>
 
-  <div class="container">
+  <div class="container collapse">
     <div class="stepwizard">
         <div class="stepwizard-row setup-panel">
             <div class="stepwizard-step">
@@ -120,27 +167,14 @@
   <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
   <script>
-    $(document).ready(function () {
-      % if warning_text:
-        $('#warningModal').modal('toggle')
-      % end
 
-      var navListItems = $('div.setup-panel div a'),
-        allWells = $('.setup-content'),
-        allNextBtn = $('.nextBtn'),
-        allBackBtn = $('.backBtn'),
-        urls = { 
-          'systemInfo': '/collect-system-info',
-          'setupHost': '/collect-host',
-          'setupService': '/collect-services',
-          'setupDatabase': '/collect-database'
-        };
 
-      initialize = function(){
+      function initialize(){
          $.get('/initialize', function(data, status){
           
           if(data.installed){
             window.location.href = '/post-installation'
+            return
           }
 
           $.each(data, function(i, item){
@@ -160,8 +194,29 @@
               $el.val(item);
             }
           });
+
+        })
+        .done(function(){
+            console.log('dsadsad')
+          $('.container').collapse('show');
+          $('#loader').hide();
         });
       }
+    $(document).ready(function () {
+      % if warning_text:
+        $('#warningModal').modal('toggle')
+      % end
+
+      var navListItems = $('div.setup-panel div a'),
+        allWells = $('.setup-content'),
+        allNextBtn = $('.nextBtn'),
+        allBackBtn = $('.backBtn'),
+        urls = { 
+          'systemInfo': '/collect-system-info',
+          'setupHost': '/collect-host',
+          'setupService': '/collect-services',
+          'setupDatabase': '/collect-database'
+        };
 
       populateDatabase = function(){
         $.get('/populate-dbbackend', function(data, status){
@@ -214,7 +269,6 @@
         }
       };
 
-      initialize();
       allWells.hide();
 
       navListItems.click(function (e) {
